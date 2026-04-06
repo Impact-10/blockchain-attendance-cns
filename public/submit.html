@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Submit Attendance</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="card">
+      <h1>Submit Attendance</h1>
+      <p>Student panel</p>
+
+      <section class="result-meta">
+        <div><span>Logged in as:</span> <strong id="loggedInStudent">-</strong></div>
+      </section>
+
+      <section class="session-banner">
+        <span>Session Timer</span>
+        <strong id="countdown">--:--</strong>
+      </section>
+
+      <form id="submitForm" class="controls">
+        <input id="code" name="code" type="text" placeholder="Attendance Code" required />
+        <button id="submitBtn" type="submit">Submit</button>
+      </form>
+
+      <div id="status" class="status"></div>
+
+      <nav class="links">
+        <button id="logoutBtn" type="button" class="ghost">Logout</button>
+      </nav>
+    </main>
+
+    <script src="/js/submit.js"></script>
+  </body>
+</html>

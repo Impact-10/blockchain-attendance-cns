@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Attendance Login</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="card">
+      <h1>Attendance Login</h1>
+      <p>Login as faculty or student</p>
+
+      <form id="loginForm" class="controls">
+        <input id="loginId" name="id" type="text" placeholder="ID (faculty or 23BCExxxx)" required />
+        <input id="loginPassword" name="password" type="password" placeholder="Password" required />
+        <button id="loginBtn" type="submit">Login</button>
+      </form>
+
+      <div id="status" class="status"></div>
+
+      <section class="result-meta" aria-label="Demo credentials">
+        <div><span>Faculty:</span> <strong>faculty / faculty01</strong></div>
+        <div><span>Students:</span> <strong>last 4 digits as password</strong></div>
+      </section>
+    </main>
+
+    <script src="/js/login.js"></script>
+  </body>
+</html>

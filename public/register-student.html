@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register Student Key</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="card card-wide">
+      <h1>Register Student Key</h1>
+      <p>Faculty onboarding (student ID to public key)</p>
+
+      <form id="registerForm" class="controls">
+        <input id="studentId" type="text" placeholder="Student ID" required />
+        <textarea id="publicKey" rows="8" placeholder="Paste Public Key (PEM format)" required></textarea>
+        <div class="controls-inline">
+          <button id="generateKeyBtn" type="button" class="ghost">Generate Keypair</button>
+          <button type="submit">Register Student</button>
+        </div>
+      </form>
+
+      <div id="status" class="status"></div>
+
+      <section class="table-wrap history-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student ID</th>
+              <th>Public Key</th>
+            </tr>
+          </thead>
+          <tbody id="studentListBody"></tbody>
+        </table>
+      </section>
+
+      <nav class="links">
+        <a class="btn-link ghost" href="/dashboard">Dashboard</a>
+        <a class="btn-link ghost" href="/generate">Generate</a>
+        <button id="logoutBtn" type="button" class="ghost">Logout</button>
+      </nav>
+    </main>
+
+    <script src="/js/register-student.js"></script>
+  </body>
+</html>

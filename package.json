@@ -1,0 +1,21 @@
+{
+  "name": "blockchain-attendance-cns",
+  "version": "1.0.0",
+  "description": "Blockchain-based attendance system with cryptographic validation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "set PORT=3001&& node server.js"
+  },
+  "keywords": [
+    "cns",
+    "attendance",
+    "blockchain",
+    "merkle",
+    "cryptography"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

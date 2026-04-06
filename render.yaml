@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: blockchain-attendance-cns
+    env: node
+    plan: free
+    autoDeploy: true
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_VERSION
+        value: 24
