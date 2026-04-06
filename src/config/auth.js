@@ -3,18 +3,9 @@ const FACULTY_CREDENTIALS = {
   password: "faculty01"
 };
 
-const STUDENT_CREDENTIALS = {
-  "23BCE1999": "1999",
-  "23BCE5065": "5065",
-  "23BCE1793": "1793",
-  "23BCE5123": "5123",
-  "23BCE1111": "1111"
-};
-
-const ALLOWED_STUDENT_IDS = Object.keys(STUDENT_CREDENTIALS);
+const STUDENT_ID_REGEX = /^\d{2}[A-Z]{3}\d{4}$/;
 
 module.exports = {
   FACULTY_CREDENTIALS,
-  STUDENT_CREDENTIALS,
-  ALLOWED_STUDENT_IDS
+  STUDENT_ID_REGEX
 };

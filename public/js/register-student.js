@@ -5,6 +5,7 @@ const generateKeyBtn = document.getElementById("generateKeyBtn");
 const studentIdInput = document.getElementById("studentId");
 const publicKeyInput = document.getElementById("publicKey");
 const logoutBtn = document.getElementById("logoutBtn");
+const STUDENT_ID_REGEX = /^\d{2}[A-Z]{3}\d{4}$/;
 
 function setStatus(message, mode = "") {
   statusEl.textContent = message;
@@ -51,7 +52,7 @@ function renderStudents(students) {
   if (!students.length) {
     listBodyEl.innerHTML = `
       <tr>
-        <td colspan="2">No students registered yet.</td>
+        <td colspan="3">No students registered yet.</td>
       </tr>
     `;
     return;
@@ -63,10 +64,42 @@ function renderStudents(students) {
         <tr>
           <td>${student.student_id}</td>
           <td>${student.has_public_key ? '<span class="badge badge-green">Registered</span>' : '<span class="badge badge-red">Missing</span>'}</td>
+          <td>
+            <button
+              type="button"
+              class="ghost student-delete-btn"
+              data-student-id="${student.student_id}"
+            >Delete</button>
+          </td>
         </tr>
       `
     )
     .join("");
+}
+
+async function deleteStudent(studentId) {
+  const confirmed = window.confirm(`Delete ${studentId} from registered roster and key registry?`);
+  if (!confirmed) {
+    return;
+  }
+
+  setStatus(`Deleting ${studentId}...`);
+  try {
+    const response = await fetch(`/api/students/${encodeURIComponent(studentId)}`, {
+      method: "DELETE"
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.message || "Delete failed");
+    }
+
+    window.localStorage.removeItem(`studentKey::${studentId}`);
+    setStatus(data.message, "success");
+    await loadStudents();
+  } catch (err) {
+    setStatus(err.message, "error");
+  }
 }
 
 async function loadStudents() {
@@ -87,6 +120,11 @@ generateKeyBtn.addEventListener("click", async () => {
 
   if (!studentId) {
     setStatus("Enter Student ID before generating keypair.", "error");
+    return;
+  }
+
+  if (!STUDENT_ID_REGEX.test(studentId)) {
+    setStatus("Student ID format must be 2 digits + 3 uppercase letters + 4 digits (example: 23BCE1999).", "error");
     return;
   }
 
@@ -119,6 +157,11 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  if (!STUDENT_ID_REGEX.test(studentId)) {
+    setStatus("Student ID format must be 2 digits + 3 uppercase letters + 4 digits (example: 23BCE1999).", "error");
+    return;
+  }
+
   setStatus("Registering student key...");
 
   try {
@@ -142,6 +185,20 @@ form.addEventListener("submit", async (event) => {
   } catch (err) {
     setStatus(err.message, "error");
   }
+});
+
+listBodyEl.addEventListener("click", async (event) => {
+  const button = event.target.closest(".student-delete-btn");
+  if (!button) {
+    return;
+  }
+
+  const studentId = button.getAttribute("data-student-id");
+  if (!studentId) {
+    return;
+  }
+
+  await deleteStudent(studentId);
 });
 
 logoutBtn.addEventListener("click", async () => {

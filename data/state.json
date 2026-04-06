@@ -4,13 +4,7 @@
   "currentCodeIssuedAt": null,
   "activeSessionId": null,
   "sessions": [],
-  "studentRegistry": [
-    "23BCE1999",
-    "23BCE5065",
-    "23BCE1793",
-    "23BCE5123",
-    "23BCE1111"
-  ],
+  "studentRegistry": [],
   "pendingRecords": [],
   "finalizedRecords": [],
   "usedNonces": [],
@@ -25,9 +19,7 @@
   ],
   "overrideLogs": [],
   "studentKeys": {},
-  "studentPublicKeys": {
-    "23BCE1999": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6cLgwwROI9t3Rz4RxE+4IIBaSbOW\nNWG8Ay8jB2PPRlQnR/BaVp/CIB68DH/GHT5a0/5KwbBK4MajDzTEvDssqQ==\n-----END PUBLIC KEY-----"
-  },
+  "studentPublicKeys": {},
   "facultyKeys": {
     "default": {
       "publicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAJEwlS1j+ZQ71334vZ7lpy/AXRNesDzdU6zyP1hsEqX0=\n-----END PUBLIC KEY-----\n",
@@ -52,9 +44,7 @@
       "lng": 80.16161270875763
     }
   ],
-  "highCgpaStudents": [
-    "23BCE5123"
-  ],
+  "highCgpaStudents": [],
   "highCgpaAllowedIps": [
     "127.0.0.1",
     "::1"

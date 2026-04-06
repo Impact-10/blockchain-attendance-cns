@@ -4,8 +4,7 @@ const express = require("express");
 const { loadState, saveState } = require("./src/data/store");
 const {
   FACULTY_CREDENTIALS,
-  STUDENT_CREDENTIALS,
-  ALLOWED_STUDENT_IDS
+  STUDENT_ID_REGEX
 } = require("./src/config/auth");
 const {
   generateCode,
@@ -198,7 +197,13 @@ app.post("/api/auth/login", (req, res) => {
     return res.json({ ok: true, role: "faculty", id: FACULTY_CREDENTIALS.id, redirectTo: "/generate" });
   }
 
-  if (STUDENT_CREDENTIALS[userId] && STUDENT_CREDENTIALS[userId] === password) {
+  const state = loadState();
+  const isValidStudentFormat = STUDENT_ID_REGEX.test(userId);
+  const expectedPassword = userId.slice(-4);
+  const isRegistered = Array.isArray(state.studentRegistry) && state.studentRegistry.includes(userId);
+  const hasPublicKey = Boolean(state.studentPublicKeys && state.studentPublicKeys[userId]);
+
+  if (isValidStudentFormat && isRegistered && hasPublicKey && password === expectedPassword) {
     const token = createAuthToken({ role: "student", id: userId });
     setAuthCookie(res, token);
     return res.json({ ok: true, role: "student", id: userId, redirectTo: "/submit" });
@@ -212,7 +217,8 @@ app.get("/api/auth/me", (req, res) => {
     return res.status(401).json({ ok: false, message: "Not logged in." });
   }
 
-  const allowedStudents = ALLOWED_STUDENT_IDS.map((studentId) => ({ id: studentId }));
+  const state = loadState();
+  const allowedStudents = (Array.isArray(state.studentRegistry) ? state.studentRegistry : []).map((studentId) => ({ id: studentId }));
   return res.json({
     ok: true,
     user: {
@@ -508,12 +514,12 @@ app.post("/api/students/register", requireRoleApi("faculty"), (req, res) => {
   const studentId = String(req.body.student_id || "").trim().toUpperCase();
   const publicKeyPem = String(req.body.public_key || "").trim();
 
-  if (!ALLOWED_STUDENT_IDS.includes(studentId)) {
-    return res.status(400).json({ ok: false, message: "This student ID is not in the allowed class list." });
-  }
-
   if (!studentId || !publicKeyPem) {
     return res.status(400).json({ ok: false, message: "Student ID and public key are required." });
+  }
+
+  if (!STUDENT_ID_REGEX.test(studentId)) {
+    return res.status(400).json({ ok: false, message: "Student ID must match format: 2 digits + 3 uppercase letters + 4 digits (example: 23BCE1999)." });
   }
 
   try {
@@ -540,6 +546,42 @@ app.post("/api/students/register", requireRoleApi("faculty"), (req, res) => {
   saveState(state);
 
   return res.json({ ok: true, message: "Student public key registered successfully." });
+});
+
+app.delete("/api/students/:studentId", requireRoleApi("faculty"), (req, res) => {
+  const state = loadState();
+  const studentId = String(req.params.studentId || "").trim().toUpperCase();
+
+  if (!STUDENT_ID_REGEX.test(studentId)) {
+    return res.status(400).json({ ok: false, message: "Invalid student ID format." });
+  }
+
+  const registryBefore = Array.isArray(state.studentRegistry) ? state.studentRegistry.length : 0;
+
+  if (!Array.isArray(state.studentRegistry)) {
+    state.studentRegistry = [];
+  }
+  state.studentRegistry = state.studentRegistry.filter((id) => id !== studentId);
+
+  if (state.studentPublicKeys && typeof state.studentPublicKeys === "object") {
+    delete state.studentPublicKeys[studentId];
+  }
+
+  if (state.studentKeys && typeof state.studentKeys === "object") {
+    delete state.studentKeys[studentId];
+  }
+
+  if (Array.isArray(state.highCgpaStudents)) {
+    state.highCgpaStudents = state.highCgpaStudents.filter((id) => id !== studentId);
+  }
+
+  const removed = registryBefore !== state.studentRegistry.length;
+  if (!removed) {
+    return res.status(404).json({ ok: false, message: "Student not found in registered roster." });
+  }
+
+  saveState(state);
+  return res.json({ ok: true, message: `Removed ${studentId} from roster and key registry.` });
 });
 
 app.post("/api/geofence/save", requireRoleApi("faculty"), (req, res) => {

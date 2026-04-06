@@ -2,10 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const { createGenesisBlock } = require("../modules/blockchain");
 const { CLASSROOM_POLYGON } = require("../modules/policy");
-const { ALLOWED_STUDENT_IDS } = require("../config/auth");
 
 const DATA_FILE = path.join(__dirname, "../../data/state.json");
-const DEFAULT_STUDENT_REGISTRY = [...ALLOWED_STUDENT_IDS];
 
 function defaultState() {
   return {
@@ -14,7 +12,7 @@ function defaultState() {
     currentCodeIssuedAt: null,
     activeSessionId: null,
     sessions: [],
-    studentRegistry: [...DEFAULT_STUDENT_REGISTRY],
+    studentRegistry: [],
     pendingRecords: [],
     finalizedRecords: [],
     usedNonces: [],
@@ -48,16 +46,14 @@ function loadState() {
   };
 
   if (!Array.isArray(state.studentRegistry)) {
-    state.studentRegistry = [...DEFAULT_STUDENT_REGISTRY];
+    state.studentRegistry = [];
   }
 
-  const allowedStudentSet = new Set(ALLOWED_STUDENT_IDS);
-  state.studentRegistry = ALLOWED_STUDENT_IDS
-    .filter((studentId) => state.studentRegistry.includes(studentId) || DEFAULT_STUDENT_REGISTRY.includes(studentId));
+  state.studentRegistry = [...new Set(state.studentRegistry.map((studentId) => String(studentId || "").trim().toUpperCase()).filter(Boolean))];
 
   if (state.studentPublicKeys && typeof state.studentPublicKeys === "object") {
     state.studentPublicKeys = Object.fromEntries(
-      Object.entries(state.studentPublicKeys).filter(([studentId]) => allowedStudentSet.has(studentId))
+      Object.entries(state.studentPublicKeys).filter(([studentId]) => state.studentRegistry.includes(studentId))
     );
   }
 
@@ -74,7 +70,9 @@ function loadState() {
   }
 
   if (Array.isArray(state.highCgpaStudents)) {
-    state.highCgpaStudents = state.highCgpaStudents.filter((studentId) => allowedStudentSet.has(studentId));
+    state.highCgpaStudents = state.highCgpaStudents
+      .map((studentId) => String(studentId || "").trim().toUpperCase())
+      .filter((studentId) => state.studentRegistry.includes(studentId));
   } else {
     state.highCgpaStudents = [];
   }
