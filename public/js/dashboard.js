@@ -130,7 +130,12 @@ async function checkGeofenceForPoint(lat, lng, accuracy) {
   const response = await fetch("/api/geofence/check", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lat, lng, accuracy })
+    body: JSON.stringify({
+      lat,
+      lng,
+      accuracy,
+      coordinates: geofencePoints.length >= 3 ? geofencePoints : undefined
+    })
   });
 
   const data = await response.json();
@@ -141,6 +146,25 @@ async function checkGeofenceForPoint(lat, lng, accuracy) {
   liveGeofenceStatusEl.textContent = data.allowed ? "YES" : "NO";
   liveGeofenceStatusEl.style.color = data.allowed ? "#067647" : "#b42318";
   return data.allowed;
+}
+
+async function persistBoundary() {
+  if (geofencePoints.length !== 4) {
+    throw new Error("Please select exactly 4 points before saving.");
+  }
+
+  const response = await fetch("/api/geofence/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ coordinates: geofencePoints })
+  });
+  const data = await response.json();
+  if (!response.ok || !data.ok) {
+    throw new Error(data.message || "Unable to save boundary");
+  }
+
+  geofencePoints = (data.coordinates || []).map(normalizePoint).slice(0, 4);
+  redrawGeofence();
 }
 
 async function loadGeofence() {
@@ -339,6 +363,7 @@ useMyLocationBtn.addEventListener("click", () => {
       redrawGeofence();
       map.fitBounds(geofencePoints.map((p) => [p.lat, p.lng]), { padding: [20, 20] });
       try {
+        await persistBoundary();
         await checkGeofenceForPoint(lat, lng, accuracy);
       } catch (error) {
         setStatus(error.message, "error");
@@ -392,25 +417,9 @@ checkLocationBtn.addEventListener("click", () => {
 });
 
 saveBoundaryBtn.addEventListener("click", async () => {
-  if (geofencePoints.length !== 4) {
-    setStatus("Please select exactly 4 points before saving.", "error");
-    return;
-  }
-
   setStatus("Saving classroom boundary...");
   try {
-    const response = await fetch("/api/geofence/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ coordinates: geofencePoints })
-    });
-    const data = await response.json();
-    if (!response.ok || !data.ok) {
-      throw new Error(data.message || "Unable to save boundary");
-    }
-
-    geofencePoints = (data.coordinates || []).map(normalizePoint).slice(0, 4);
-    redrawGeofence();
+    await persistBoundary();
     setStatus("Boundary saved successfully", "success");
   } catch (err) {
     setStatus(err.message, "error");

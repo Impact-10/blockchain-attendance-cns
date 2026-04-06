@@ -483,9 +483,14 @@ app.post("/api/geofence/check", requireRoleApi("faculty"), (req, res) => {
     return res.status(400).json({ ok: false, message: "Valid latitude and longitude are required." });
   }
 
-  const boundary = sanitizePolygon(state.classroomBoundary).length === 4
-    ? sanitizePolygon(state.classroomBoundary)
-    : CLASSROOM_POLYGON;
+  const requestedBoundary = orderPolygonClockwise(req.body.coordinates || []);
+  const boundary = requestedBoundary.length >= 3
+    ? requestedBoundary
+    : (
+      sanitizePolygon(state.classroomBoundary).length === 4
+        ? sanitizePolygon(state.classroomBoundary)
+        : CLASSROOM_POLYGON
+    );
 
   const allowed = isLocationAllowed(lat, lng, boundary, { accuracyMeters: accuracy });
   return res.json({
