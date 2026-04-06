@@ -15,7 +15,12 @@ const {
 } = require("./src/services/attendanceService");
 const { verifyChain } = require("./src/modules/blockchain");
 const { buildMerkleRootFromRecords } = require("./src/modules/merkle");
-const { CLASSROOM_POLYGON, sanitizePolygon } = require("./src/modules/policy");
+const {
+  CLASSROOM_POLYGON,
+  sanitizePolygon,
+  orderPolygonClockwise,
+  isLocationAllowed
+} = require("./src/modules/policy");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -270,6 +275,7 @@ app.post("/api/student/submit", requireRoleApi("student"), (req, res) => {
     deviceId: req.body.device_id,
     lat: req.body.lat,
     lon: req.body.lon,
+    accuracy: req.body.accuracy,
     clientIp: ip
   });
 
@@ -461,6 +467,28 @@ app.get("/api/geofence", requireRoleApi("faculty"), (req, res) => {
   });
 });
 
+app.post("/api/geofence/check", requireRoleApi("faculty"), (req, res) => {
+  const state = loadState();
+  const lat = Number(req.body.lat);
+  const lng = Number(req.body.lng ?? req.body.lon);
+  const accuracy = Number(req.body.accuracy);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return res.status(400).json({ ok: false, message: "Valid latitude and longitude are required." });
+  }
+
+  const boundary = sanitizePolygon(state.classroomBoundary).length === 4
+    ? sanitizePolygon(state.classroomBoundary)
+    : CLASSROOM_POLYGON;
+
+  const allowed = isLocationAllowed(lat, lng, boundary, { accuracyMeters: accuracy });
+  return res.json({
+    ok: true,
+    allowed,
+    accuracy: Number.isFinite(accuracy) ? accuracy : null
+  });
+});
+
 app.get("/api/students", requireRoleApi("faculty"), (req, res) => {
   const state = loadState();
   const registry = Array.isArray(state.studentRegistry) ? state.studentRegistry : [];
@@ -516,7 +544,7 @@ app.post("/api/students/register", requireRoleApi("faculty"), (req, res) => {
 
 app.post("/api/geofence/save", requireRoleApi("faculty"), (req, res) => {
   const state = loadState();
-  const boundary = sanitizePolygon(req.body.coordinates);
+  const boundary = orderPolygonClockwise(req.body.coordinates);
 
   if (boundary.length !== 4) {
     return res.status(400).json({

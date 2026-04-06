@@ -286,13 +286,22 @@ button.ghost,
   font-weight: 600;
 }
 
-.map-toolbar select {
+.map-toolbar select,
+.map-toolbar input {
   border: 1px solid #d8dfeb;
   border-radius: 10px;
   padding: 8px 10px;
   background: #fff;
   font-size: 14px;
   color: var(--text);
+}
+
+.map-toolbar input {
+  width: 180px;
+}
+
+.map-location-meta {
+  margin-top: 12px;
 }
 
 .geofence-map {

@@ -120,6 +120,7 @@ function submitAttendance(state, {
   deviceId,
   lat,
   lon,
+  accuracy,
   clientIp
 }) {
   const safeStudentId = String(studentId || "").trim().toUpperCase();
@@ -132,6 +133,7 @@ function submitAttendance(state, {
   const safeDeviceId = String(deviceId || "").trim();
   const latitude = Number(lat);
   const longitude = Number(lon);
+  const locationAccuracy = Number(accuracy);
   const ip = normalizeIp(clientIp);
 
   if (!safeStudentId || !safeSessionId || !normalizedCode || !safeTimestamp || !safeNonce || !safeSignature || !safeDeviceId) {
@@ -225,7 +227,7 @@ function submitAttendance(state, {
     return { ok: false, message: "Student already submitted for this session." };
   }
 
-  if (!isLocationAllowed(latitude, longitude, state.classroomBoundary)) {
+  if (!isLocationAllowed(latitude, longitude, state.classroomBoundary, { accuracyMeters: locationAccuracy })) {
     return { ok: false, message: "You are outside the classroom geofence." };
   }
 

@@ -8,12 +8,15 @@ const tableBodyEl = document.getElementById("studentTableBody");
 const statusEl = document.getElementById("status");
 const finalizeBtn = document.getElementById("finalizeBtn");
 const useMyLocationBtn = document.getElementById("useMyLocationBtn");
+const checkLocationBtn = document.getElementById("checkLocationBtn");
 const clearPointsBtn = document.getElementById("clearPointsBtn");
 const saveBoundaryBtn = document.getElementById("saveBoundaryBtn");
 const cornerListEl = document.getElementById("cornerList");
-const boundarySizeEl = document.getElementById("boundarySize");
+const offsetValueEl = document.getElementById("offsetValue");
 const sessionHistoryBodyEl = document.getElementById("sessionHistoryBody");
 const currentMerklePreviewEl = document.getElementById("currentMerklePreview");
+const liveLocationEl = document.getElementById("liveLocation");
+const liveGeofenceStatusEl = document.getElementById("liveGeofenceStatus");
 const logoutBtn = document.getElementById("logoutBtn");
 
 let dashboardExpiresAt = null;
@@ -105,6 +108,39 @@ function generateAutoBoundary(lat, lng, offset) {
     { lat: lat - offset, lng: lng - offset },
     { lat: lat - offset, lng: lng + offset }
   ];
+}
+
+function getOffsetValue() {
+  const offset = Number(offsetValueEl.value || "0.00010");
+  if (!Number.isFinite(offset) || offset <= 0) {
+    return 0.00010;
+  }
+  return Math.min(offset, 0.01);
+}
+
+function showLiveLocation(position) {
+  const lat = Number(position.coords.latitude);
+  const lng = Number(position.coords.longitude);
+  const accuracy = Number(position.coords.accuracy);
+  liveLocationEl.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)} (accuracy ${Math.round(accuracy)}m)`;
+  return { lat, lng, accuracy };
+}
+
+async function checkGeofenceForPoint(lat, lng, accuracy) {
+  const response = await fetch("/api/geofence/check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lat, lng, accuracy })
+  });
+
+  const data = await response.json();
+  if (!response.ok || !data.ok) {
+    throw new Error(data.message || "Unable to validate live position");
+  }
+
+  liveGeofenceStatusEl.textContent = data.allowed ? "YES" : "NO";
+  liveGeofenceStatusEl.style.color = data.allowed ? "#067647" : "#b42318";
+  return data.allowed;
 }
 
 async function loadGeofence() {
@@ -295,24 +331,62 @@ useMyLocationBtn.addEventListener("click", () => {
   setStatus("Detecting your current location...");
 
   navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const lat = Number(position.coords.latitude);
-      const lng = Number(position.coords.longitude);
-      const offset = Number(boundarySizeEl.value || "0.0001");
+    async (position) => {
+      const { lat, lng, accuracy } = showLiveLocation(position);
+      const offset = getOffsetValue();
 
       geofencePoints = generateAutoBoundary(lat, lng, offset);
       redrawGeofence();
       map.fitBounds(geofencePoints.map((p) => [p.lat, p.lng]), { padding: [20, 20] });
+      try {
+        await checkGeofenceForPoint(lat, lng, accuracy);
+      } catch (error) {
+        setStatus(error.message, "error");
+      }
+
       setStatus("Auto boundary generated from your current location", "success");
       useMyLocationBtn.disabled = false;
     },
-    () => {
-      setStatus("Unable to fetch location. Please allow location permission.", "error");
+    (error) => {
+      const message = error && error.code === 1
+        ? "Location permission denied for this browser session."
+        : "Unable to fetch location. Retry in open sky area.";
+      setStatus(message, "error");
       useMyLocationBtn.disabled = false;
     },
     {
       enableHighAccuracy: true,
       timeout: 10000
+    }
+  );
+});
+
+checkLocationBtn.addEventListener("click", () => {
+  if (!navigator.geolocation) {
+    setStatus("Geolocation is not supported in this browser.", "error");
+    return;
+  }
+
+  checkLocationBtn.disabled = true;
+  setStatus("Checking your live location against geofence...");
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const { lat, lng, accuracy } = showLiveLocation(position);
+      const allowed = await checkGeofenceForPoint(lat, lng, accuracy);
+      setStatus(allowed ? "Your live location is inside geofence." : "Your live location is outside geofence.", allowed ? "success" : "error");
+      checkLocationBtn.disabled = false;
+    },
+    (error) => {
+      const message = error && error.code === 1
+        ? "Location permission denied for this browser session."
+        : "Unable to fetch current location.";
+      setStatus(message, "error");
+      checkLocationBtn.disabled = false;
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000
     }
   );
 });

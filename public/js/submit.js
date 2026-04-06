@@ -192,7 +192,21 @@ function tickCountdown() {
   }
 }
 
-function getLocation() {
+function geolocationErrorMessage(error) {
+  if (!error || typeof error.code !== "number") {
+    return "Unable to fetch location. Please try again.";
+  }
+
+  if (error.code === 1) {
+    return "Location permission is denied for this site. Allow location access in browser settings.";
+  }
+  if (error.code === 2) {
+    return "Location is temporarily unavailable. Move to open space and try again.";
+  }
+  return "Location request timed out. Please keep GPS/location ON and try again.";
+}
+
+function requestCurrentPosition(options) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error("Geolocation is not supported in this browser."));
@@ -203,13 +217,49 @@ function getLocation() {
       (position) => {
         resolve({
           lat: position.coords.latitude,
-          lon: position.coords.longitude
+          lon: position.coords.longitude,
+          accuracy: Number(position.coords.accuracy)
         });
       },
-      () => reject(new Error("Location access denied. Please allow location permission.")),
-      { enableHighAccuracy: true, timeout: 8000 }
+      (error) => reject(error),
+      options
     );
   });
+}
+
+async function getLocation() {
+  if (navigator.permissions && navigator.permissions.query) {
+    try {
+      const permission = await navigator.permissions.query({ name: "geolocation" });
+      if (permission.state === "denied") {
+        throw new Error("Location permission is denied for this site. Allow location access and retry.");
+      }
+    } catch {
+      // Continue with geolocation API fallback if permission API is unavailable.
+    }
+  }
+
+  try {
+    return await requestCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 18000,
+      maximumAge: 0
+    });
+  } catch (error) {
+    if (error && error.code === 1) {
+      throw new Error(geolocationErrorMessage(error));
+    }
+
+    try {
+      return await requestCurrentPosition({
+        enableHighAccuracy: false,
+        timeout: 22000,
+        maximumAge: 30000
+      });
+    } catch (retryError) {
+      throw new Error(geolocationErrorMessage(retryError));
+    }
+  }
 }
 
 form.addEventListener("submit", async (event) => {
@@ -266,7 +316,8 @@ form.addEventListener("submit", async (event) => {
         public_key: keys.publicKeyPem,
         device_id: deviceId,
         lat: location.lat,
-        lon: location.lon
+        lon: location.lon,
+        accuracy: location.accuracy
       })
     });
 
